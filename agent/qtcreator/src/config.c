@@ -101,8 +101,8 @@ void initializeConfig(char *options) {
     }
 
     if (configuration.verboseMode) {
-        printf("INFO: Verbose mode enabled.\n");
-        printf("INFO: Output file: %s\n", configuration.outputFile);
-        printf("INFO: Max. delay loop iterations: %ld\n", configuration.maxPidDelay);
+        fprintf(stderr, "INFO: Verbose mode enabled.\n");
+        fprintf(stderr, "INFO: Output file: %s\n", configuration.outputFile);
+        fprintf(stderr, "INFO: Max. delay loop iterations: %ld\n", configuration.maxPidDelay);
     }
 }

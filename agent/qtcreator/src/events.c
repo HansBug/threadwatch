@@ -27,21 +27,21 @@ RingBuffer *createRingBuffer() {
 #ifdef DEBUG_STRUCTURE
     DataRecord startEvent;
 
-    printf("sizeof(DataRecord): %d\n", sizeof(DataRecord));
-    printf("sizeof(ThreadStartEvent): %d\n", sizeof(ThreadStartEvent));
-    printf("sizeof(ThreadDeathEvent): %d\n", sizeof(ThreadDeathEvent));
-    printf("sizeof(ThreadStateChangeEvent): %d\n", sizeof(ThreadStateChangeEvent));
-    printf("sizeof(timestamp): %d\n", sizeof(struct timespec));
-    printf("Offset thread name: %d\n", (void *) &startEvent.startEvent.threadName[0] - (void *) &startEvent);
-    printf("Offset uniqueThreadId: %d\n", (void *) &startEvent.uniqueThreadId - (void *) &startEvent);
-    printf("Offset timestamp: %d\n", (void *) &startEvent.timestamp - (void *) &startEvent);
-    printf("Offset startEvent: %d\n", (void *) &startEvent.startEvent - (void *) &startEvent);
-    printf("sizeof(jint): %d\n", sizeof(jint));
-    printf("Offset threadState: %d\n", (void *) &startEvent.stateChangeEvent - (void *) &startEvent);
+    fprintf(stderr, "sizeof(DataRecord): %d\n", sizeof(DataRecord));
+    fprintf(stderr, "sizeof(ThreadStartEvent): %d\n", sizeof(ThreadStartEvent));
+    fprintf(stderr, "sizeof(ThreadDeathEvent): %d\n", sizeof(ThreadDeathEvent));
+    fprintf(stderr, "sizeof(ThreadStateChangeEvent): %d\n", sizeof(ThreadStateChangeEvent));
+    fprintf(stderr, "sizeof(timestamp): %d\n", sizeof(struct timespec));
+    fprintf(stderr, "Offset thread name: %d\n", (void *) &startEvent.startEvent.threadName[0] - (void *) &startEvent);
+    fprintf(stderr, "Offset uniqueThreadId: %d\n", (void *) &startEvent.uniqueThreadId - (void *) &startEvent);
+    fprintf(stderr, "Offset timestamp: %d\n", (void *) &startEvent.timestamp - (void *) &startEvent);
+    fprintf(stderr, "Offset startEvent: %d\n", (void *) &startEvent.startEvent - (void *) &startEvent);
+    fprintf(stderr, "sizeof(jint): %d\n", sizeof(jint));
+    fprintf(stderr, "Offset threadState: %d\n", (void *) &startEvent.stateChangeEvent - (void *) &startEvent);
 #endif
 
 #ifdef DEBUG_BUFFER
-    printf("Creating ringbuffer with size %d\n",sizeof(RingBuffer));
+    fprintf(stderr, "Creating ringbuffer with size %d\n",sizeof(RingBuffer));
 #endif
 
     RingBuffer *result = (RingBuffer *) malloc(sizeof(RingBuffer));
@@ -63,7 +63,7 @@ RingBuffer *createRingBuffer() {
     pthread_mutex_init(&result->lock, NULL);
 
 #ifdef DEBUG_BUFFER
-    printf("Ringbuffer created.\n");
+    fprintf(stderr, "Ringbuffer created.\n");
 #endif
 
     return result;
@@ -78,11 +78,11 @@ static void unlock(RingBuffer *buffer) {
 }
 
 void destroyRingBuffer(RingBuffer *buffer) {
-    printf("INFO: Disposing ring buffer (events written: %d , events read: %d)\n", buffer->elementsWritten,
+    fprintf(stderr, "INFO: Disposing ring buffer (events written: %d , events read: %d)\n", buffer->elementsWritten,
            buffer->elementsRead);
 
     if (buffer->lostSamplesCount > 0) {
-        printf("WARNING: Lost %d samples\n", buffer->lostSamplesCount);
+        fprintf(stderr, "WARNING: Lost %d samples\n", buffer->lostSamplesCount);
     }
     free(buffer->records);
     free(buffer);
@@ -93,7 +93,7 @@ int writeRecord(RingBuffer *buffer, WriteRecordCallback callback, void *data) {
     int newPtr;
 
 #ifdef DEBUG_BUFFER
-    printf("About to write to ring buffer\n");
+    fprintf(stderr, "About to write to ring buffer\n");
 #endif
     // START CRITICAL SECTION    
     lock(buffer);
@@ -103,7 +103,7 @@ int writeRecord(RingBuffer *buffer, WriteRecordCallback callback, void *data) {
     if (bufferNotFull) {
         if (callback(&buffer->records[buffer->writePtr], data)) {
 #ifdef DEBUG
-            printf("Callback set record type: %d\n\n",buffer->records[buffer->writePtr].type);
+            fprintf(stderr, "Callback set record type: %d\n\n",buffer->records[buffer->writePtr].type);
 #endif
             buffer->elementsWritten++;
             buffer->writePtr = newPtr;
@@ -115,7 +115,7 @@ int writeRecord(RingBuffer *buffer, WriteRecordCallback callback, void *data) {
     // END CRITICAL SECTION
     unlock(buffer);
 #ifdef DEBUG_BUFFER
-    printf("written to ring buffer ( buffer_not_full = %d)\n",bufferNotFull);
+    fprintf(stderr, "written to ring buffer ( buffer_not_full = %d)\n",bufferNotFull);
 #endif
     return bufferNotFull;
 }

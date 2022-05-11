@@ -37,7 +37,7 @@ void startWriterThread(RingBuffer *buffer, char *file) {
     pthread_attr_t tattr;
 
     if (configuration.verboseMode) {
-        printf("INFO: Started writer thread that writes to file %s\n", file);
+        fprintf(stderr, "INFO: Started writer thread that writes to file %s\n", file);
     }
 
     if (!(outputFile = fopen(file, "w+"))) {
@@ -80,7 +80,7 @@ static void writeRecordToFile(DataRecord *record) {
 
     switch (record->type) {
         case EVENT_THREAD_START:
-            printf("Writing thread name %s\n", &record->startEvent.threadName[0]);
+            fprintf(stderr, "Writing thread name %s\n", &record->startEvent.threadName[0]);
             writeMember(&record->startEvent.threadName[0], sizeof(record->startEvent.threadName));
             break;
         case EVENT_THREAD_DEATH:
@@ -94,14 +94,14 @@ static void writeRecordToFile(DataRecord *record) {
     }
 
 #ifdef DEBUG
-    printf("Writing record to file (type: %d)\n",record->type);
-    fflush(stdout);
+    fprintf(stderr, "Writing record to file (type: %d)\n",record->type);
+    fflush(stderr);
 #endif
 }
 
 static void *writerThread(RingBuffer *buffer) {
 #ifdef DEBUG
-    printf("Writer thread is running.");
+    fprintf(stderr, "Writer thread is running.");
 #endif
     do {
         while (readRecord(buffer, &writeRecordToFile));
@@ -110,7 +110,7 @@ static void *writerThread(RingBuffer *buffer) {
     } while (!terminateWriter);
 
 #ifdef DEBUG
-    printf("Writer thread is terminating.");
+    fprintf(stderr, "Writer thread is terminating.");
 #endif
 
     while (readRecord(buffer, &writeRecordToFile));
@@ -119,14 +119,14 @@ static void *writerThread(RingBuffer *buffer) {
     fclose(outputFile);
 
     if (configuration.verboseMode) {
-        printf("INFO: Closed output file.\n");
+        fprintf(stderr, "INFO: Closed output file.\n");
     }
     return NULL;
 }
 
 void terminateWriterThread() {
 #ifdef DEBUG
-    printf("Asking writer thread to terminate.");
+    fprintf(stderr, "Asking writer thread to terminate.");
 #endif
 
     __sync_synchronize();

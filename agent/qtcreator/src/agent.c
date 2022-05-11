@@ -115,7 +115,7 @@ JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved) {
     sampleBuffer = createRingBuffer();
 
 #ifdef DEBUG
-    printf("onLoad() called , VM: %p\n",currentVM);
+    fprintf(stderr, "onLoad() called , VM: %p\n",currentVM);
 #endif
 
     // clear memory
@@ -128,7 +128,7 @@ JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved) {
     CHECK_JVMTI_ERROR(jvmti, err);
 
 #ifdef DEBUG
-    printf("Setting event callbacks\n");
+    fprintf(stderr, "Setting event callbacks\n");
 #endif
     callbacks.VMStart = &onVMStart;
     callbacks.VMDeath = &onVMDeath;
@@ -139,7 +139,7 @@ JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved) {
     CHECK_JVMTI_ERROR(jvmti, err);
 
 #ifdef DEBUG
-    printf("Enabling events\n");
+    fprintf(stderr, "Enabling events\n");
 #endif
 
     err = (*jvmti)->SetEventNotificationMode(jvmti, JVMTI_ENABLE, JVMTI_EVENT_VM_START, (jthread)NULL);
@@ -173,7 +173,7 @@ enterAgentMonitor(jvmti);
 globalJniEnv = jni_env;
 
 #ifdef DEBUG
-printf("VM started.\n");
+fprintf(stderr, "VM started.\n");
 #endif
 
 // Start sampling thread
@@ -190,14 +190,14 @@ static void JNICALL
 
 onVMDeath() {
 #ifdef DEBUG
-    printf("VM exit.\n");
+    fprintf(stderr, "VM exit.\n");
 #endif
 
     __sync_synchronize();
     terminateSamplingThread = 1;
 
 #ifdef DEBUG
-    printf("Waiting for sampling thread to die\n");
+    fprintf(stderr, "Waiting for sampling thread to die\n");
 #endif
 
     if (pthread_join(samplingThreadId, NULL)) {
@@ -205,7 +205,7 @@ onVMDeath() {
     }
 
 #ifdef DEBUG
-    printf("Terminating writer thread\n");
+    fprintf(stderr, "Terminating writer thread\n");
 #endif
     terminateWriterThread();
 
@@ -223,7 +223,7 @@ static void startSamplingThread(JNIEnv *jni_env) {
     pthread_attr_t tattr;
 
 #ifdef DEBUG
-    printf("Starting sampling thread (env: %p\n",jni_env);
+    fprintf(stderr, "Starting sampling thread (env: %p\n",jni_env);
 #endif
 
     /* initialized with default attributes */
@@ -256,7 +256,7 @@ static void *sampleThreadStates(void *ptr) {
     startWriterThread(sampleBuffer, configuration.outputFile);
 
 #ifdef DEBUG
-    printf("*** attaching sampling thread.\n");
+    fprintf(stderr, "*** attaching sampling thread.\n");
 #endif
 
     err = (*currentVM)->AttachCurrentThreadAsDaemon(currentVM, (void **) &env, &attach_args);
@@ -266,7 +266,7 @@ static void *sampleThreadStates(void *ptr) {
     }
 
     if (configuration.verboseMode) {
-        printf("INFO: Ready to sample thread states, ring buffer size: %d events \n", SAMPLE_RINGBUFFER_SIZE);
+        fprintf(stderr, "INFO: Ready to sample thread states, ring buffer size: %d events \n", SAMPLE_RINGBUFFER_SIZE);
     }
 
     (*currentVM)->GetEnv(currentVM, (void **) &samplingThreadJvmti, JVMTI_VERSION_1_0);
@@ -278,7 +278,7 @@ static void *sampleThreadStates(void *ptr) {
     }
 
 #ifdef DEBUG
-    printf("*** Sampling thread detached, terminating.\n");
+    fprintf(stderr, "*** Sampling thread detached, terminating.\n");
 #endif
 
     (*currentVM)->DetachCurrentThread(currentVM);
@@ -295,8 +295,8 @@ static int populateThreadSampleRecord(DataRecord *record, ThreadListNode *curren
     jint threadState;
 
 #ifdef DEBUG
-    printf("Querying thread state for %lx : ",current->thread);
-    fflush(stdout);
+    fprintf(stderr, "Querying thread state for %lx : ",current->thread);
+    fflush(stderr);
 #endif
 
     err = (*samplingThreadJvmti)->GetThreadState(samplingThreadJvmti, current->threadGlobalRef, &threadState);
@@ -315,8 +315,8 @@ static int populateThreadSampleRecord(DataRecord *record, ThreadListNode *curren
     }
 
 #ifdef DEBUG
-    printf("Thread %d , state: %d\n",current->uniqueThreadId,threadState);
-    fflush(stdout);
+    fprintf(stderr, "Thread %d , state: %d\n",current->uniqueThreadId,threadState);
+    fflush(stderr);
 #endif
 
     current->previousThreadState = threadState;
@@ -373,7 +373,7 @@ GetThreadInfo(jvmti, thread,
 if ( threadInfo.name != NULL && ! isSamplingThread( &threadInfo )) { // ignore attaching of our sampling thread
 
 #ifdef DEBUG
-printf("Thread started: %s (ID: %lx)\n",threadInfo.name,thread);
+fprintf(stderr, "Thread started: %s (ID: %lx)\n",threadInfo.name,thread);
 #endif
 
 // create global ref to the thread instance so it
@@ -392,8 +392,8 @@ exitAgentMonitor(jvmti_env);
 
 static void cleanUp(ThreadListNode *node, jvmtiEnv *jvmti_env) {
 #ifdef DEBUG
-    printf("cleanUp(): Thread %lx : ",node->thread);
-    fflush(stdout);
+    fprintf(stderr, "cleanUp(): Thread %lx : ",node->thread);
+    fflush(stderr);
 #endif
 
     enterAgentMonitor(jvmti_env);
@@ -425,7 +425,7 @@ GetThreadInfo(jvmti, thread,
 if ( threadInfo.name != NULL && ! isSamplingThread( &threadInfo ))
 {
 #ifdef DEBUG
-printf("Thread ended: %s (ID: %lx)\n",threadInfo.name,thread);
+fprintf(stderr, "Thread ended: %s (ID: %lx)\n",threadInfo.name,thread);
 #endif
 
 existingNode = findThreadListNode(thread);
