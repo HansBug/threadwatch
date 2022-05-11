@@ -1,3 +1,5 @@
+.PHONY: clean all test
+
 RM     ?= rm -rf
 CC     ?= $(shell which gcc)
 CFLAGS ?= -g -Wall -Wformat=0 -fPIC -O0
@@ -12,35 +14,38 @@ TARGET     := target
 JAVA       ?= $(shell which java)
 JAVAC      ?= $(shell which javac)
 
-all: agent events threadlist writerthread pid config
+LOG_FILE   ?= /tmp/threadwatcher.out
+
+all: build
+build: $(TARGET)/Test.class $(TARGET)/agent.so
+
+$(TARGET)/agent.so: $(TARGET)/agent.o $(TARGET)/events.o $(TARGET)/threadlist.o $(TARGET)/writerthread.o $(TARGET)/pid.o $(TARGET)/config.o
 	$(CC) -pthread -fPIC -shared -Wall  -Wl,--no-as-needed -lm -lrt -o $(TARGET)/agent.so $(TARGET)/agent.o $(TARGET)/events.o $(TARGET)/threadlist.o $(TARGET)/writerthread.o $(TARGET)/pid.o $(TARGET)/config.o
 
-agent: $(SRC)/agent.c $(MYINCLUDES)/agent.h
+$(TARGET)/agent.o: $(SRC)/agent.c $(MYINCLUDES)/agent.h
 	$(CC) -c -o $(TARGET)/agent.o $(SRC)/agent.c $(CFLAGS) ${INCLUDES}
 
-events: $(SRC)/events.c $(MYINCLUDES)/events.h
+$(TARGET)/events.o: $(SRC)/events.c $(MYINCLUDES)/events.h
 	$(CC) -c -o $(TARGET)/events.o $(SRC)/events.c $(CFLAGS) ${INCLUDES}
 
-writerthread: $(SRC)/writerthread.c $(MYINCLUDES)/writerthread.h
+$(TARGET)/writerthread.o: $(SRC)/writerthread.c $(MYINCLUDES)/writerthread.h
 	$(CC) -c -o $(TARGET)/writerthread.o $(SRC)/writerthread.c $(CFLAGS) ${INCLUDES}
 
-threadlist: $(SRC)/threadlist.c $(MYINCLUDES)/threadlist.h
+$(TARGET)/threadlist.o: $(SRC)/threadlist.c $(MYINCLUDES)/threadlist.h
 	$(CC) -c -o $(TARGET)/threadlist.o $(SRC)/threadlist.c $(CFLAGS) ${INCLUDES}
 
-pid: $(SRC)/pid.c $(MYINCLUDES)/pid.h
+$(TARGET)/pid.o: $(SRC)/pid.c $(MYINCLUDES)/pid.h
 	$(CC) -c -o $(TARGET)/pid.o $(SRC)/pid.c $(CFLAGS) ${INCLUDES}
 
-config: $(SRC)/config.c $(MYINCLUDES)/config.h
-
+$(TARGET)/config.o: $(SRC)/config.c $(MYINCLUDES)/config.h
 	$(CC) -c -o $(TARGET)/config.o $(SRC)/config.c $(CFLAGS) ${INCLUDES}
 
-.PHONY: clean
-
-clean:
-	$(RM) target/*.o target/*.so target/*.class
-
-Test.class: java/Test.java
+$(TARGET)/Test.class: java/Test.java
 	$(JAVAC) java/Test.java -d target
 
-test:  Test.class all
-	$(JAVA) -Xss512k -agentpath:target/agent.so=file=/tmp/threadwatcher.out,verbose=true -cp target Test
+test: $(TARGET)/Test.class $(TARGET)/agent.so
+	$(JAVA) -Xss512k -agentpath:target/agent.so=file=${LOG_FILE},verbose=true -cp $(TARGET) Test
+
+clean:
+	$(RM) $(TARGET)/*.o $(TARGET)/*.so $(TARGET)/*.class
+
