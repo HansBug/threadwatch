@@ -23,132 +23,125 @@ limitations under the License.
 
 #include "threadlist.h"
 
-static ThreadList threadList = { .head=NULL , .tail=NULL , .size=0 };
+static ThreadList threadList = {.head=NULL, .tail=NULL, .size=0};
 
 static pthread_mutex_t threadListLock = PTHREAD_MUTEX_INITIALIZER;
 
-static int threadId=0;
+static int threadId = 0;
 
 /*
  * Create and add thread list node.
  */
-ThreadListNode* addThreadListNode(char *threadName,jthread thread,jthread threadGlobalRef)
-{
-  const int nameLen = strlen(threadName)+1;
+ThreadListNode *addThreadListNode(char *threadName, jthread thread, jthread threadGlobalRef) {
+    const int nameLen = strlen(threadName) + 1;
 
-  ThreadListNode *newNode = (ThreadListNode*) malloc(sizeof(ThreadListNode));
-  if ( ! newNode ) {
-    fprintf(stderr,"ERROR: Failed to allocate memory for thread list node\n");
-    abort();
-  }
+    ThreadListNode *newNode = (ThreadListNode *) malloc(sizeof(ThreadListNode));
+    if (!newNode) {
+        fprintf(stderr, "ERROR: Failed to allocate memory for thread list node\n");
+        abort();
+    }
 
-  newNode->next = NULL;
-  newNode->threadName = (char*) malloc( nameLen );
-  if ( ! newNode->threadName ) {
-    fprintf(stderr,"ERROR: Failed to allocate memory for thread list node\n");
-    abort();
-  }
-  strncpy( newNode->threadName , threadName, nameLen);
-  
-  newNode->thread = thread;
-  newNode->threadGlobalRef = threadGlobalRef;
-  newNode->previousThreadState = 0;
+    newNode->next = NULL;
+    newNode->threadName = (char *) malloc(nameLen);
+    if (!newNode->threadName) {
+        fprintf(stderr, "ERROR: Failed to allocate memory for thread list node\n");
+        abort();
+    }
+    strncpy(newNode->threadName, threadName, nameLen);
 
-  // START: Critical section
-  pthread_mutex_lock( &threadListLock);
-  
-  newNode->uniqueThreadId = threadId++;  
+    newNode->thread = thread;
+    newNode->threadGlobalRef = threadGlobalRef;
+    newNode->previousThreadState = 0;
 
-  if ( threadList.head == NULL ) {
-    threadList.head = newNode;
-  } else {
-    threadList.tail->next=newNode;
-  } 
-  threadList.tail = newNode;
-  threadList.size++;
+    // START: Critical section
+    pthread_mutex_lock(&threadListLock);
 
-  // END: Critical section
-  pthread_mutex_unlock( &threadListLock);
-  return newNode;
+    newNode->uniqueThreadId = threadId++;
+
+    if (threadList.head == NULL) {
+        threadList.head = newNode;
+    } else {
+        threadList.tail->next = newNode;
+    }
+    threadList.tail = newNode;
+    threadList.size++;
+
+    // END: Critical section
+    pthread_mutex_unlock(&threadListLock);
+    return newNode;
 }
 
-ThreadListNode *findThreadListNode(jthread thread) 
-{    
-  ThreadListNode *result;
-  
-      // START: Critical section
-  pthread_mutex_lock( &threadListLock);
-  
-  result = threadList.head;
-  while ( result != NULL && result->thread != thread ) {
-    result = result -> next;    
-  }
-  // END: Critical section
-  pthread_mutex_unlock( &threadListLock);
-  return result;
+ThreadListNode *findThreadListNode(jthread thread) {
+    ThreadListNode *result;
+
+    // START: Critical section
+    pthread_mutex_lock(&threadListLock);
+
+    result = threadList.head;
+    while (result != NULL && result->thread != thread) {
+        result = result->next;
+    }
+    // END: Critical section
+    pthread_mutex_unlock(&threadListLock);
+    return result;
 }
 
 /*
  * Unlink and free a thread list node.
  * RETURN VALUE: 1 if thread list is now empty
  */
-void removeThreadListNode(jthread thread,CleanUpVisitor cleanUp,void *data)
-{
-  ThreadListNode *previous;
-  ThreadListNode *current;
-  int removed = 0;
+void removeThreadListNode(jthread thread, CleanUpVisitor cleanUp, void *data) {
+    ThreadListNode *previous;
+    ThreadListNode *current;
+    int removed = 0;
 
-  // START: Critical section
-  pthread_mutex_lock( &threadListLock);
+    // START: Critical section
+    pthread_mutex_lock(&threadListLock);
 
-  previous = NULL;
-  current = threadList.head;
-  while ( current ) 
-  {
-    if ( current->thread == thread ) 
-    {
-      if ( previous == NULL ) { // remove first
-        threadList.head = current->next;
-      } else {
-        // 2nd or last node
-        previous->next = current->next;
-      }
-      if ( threadList.tail == current ) {
-        threadList.tail = previous; 
-      }      
-      cleanUp(current,data);
-      free( current->threadName );
-      free( current ); 
-      threadList.size--;
-      removed = 1;   
-      break; 
-    } 
-    previous = current;
-    current = current-> next;
-  }
+    previous = NULL;
+    current = threadList.head;
+    while (current) {
+        if (current->thread == thread) {
+            if (previous == NULL) { // remove first
+                threadList.head = current->next;
+            } else {
+                // 2nd or last node
+                previous->next = current->next;
+            }
+            if (threadList.tail == current) {
+                threadList.tail = previous;
+            }
+            cleanUp(current, data);
+            free(current->threadName);
+            free(current);
+            threadList.size--;
+            removed = 1;
+            break;
+        }
+        previous = current;
+        current = current->next;
+    }
 
-  // END: Critical section
-  pthread_mutex_unlock( &threadListLock);
+    // END: Critical section
+    pthread_mutex_unlock(&threadListLock);
 
-  if ( ! removed ) {
-    fprintf(stderr,"WARNING: Failed to release %p\n",thread);
-  }
+    if (!removed) {
+        fprintf(stderr, "WARNING: Failed to release %p\n", thread);
+    }
 }
 
-void visitThreadList( ThreadListVisitor visitor)
-{
+void visitThreadList(ThreadListVisitor visitor) {
     ThreadListNode *current;
 
-      // START: Critical section
-    pthread_mutex_lock( &threadListLock);
-  
+    // START: Critical section
+    pthread_mutex_lock(&threadListLock);
+
     current = threadList.head;
-    while( current ) 
-    {
-      visitor( current );
-      current = current->next;
+    while (current) {
+        visitor(current);
+        current = current->next;
     }
-     
-  // END: Critical section
-  pthread_mutex_unlock( &threadListLock);  
+
+    // END: Critical section
+    pthread_mutex_unlock(&threadListLock);
 }

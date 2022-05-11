@@ -21,6 +21,9 @@ ${AGENT_FILE}:
 ${LOG_FILE}:
 	$(MAKE) -C ${AGENT} test LOG_FILE="$(shell readlink -f ${LOG_FILE})"
 
+test:
+	$(MAKE) -C ${AGENT} test LOG_FILE="$(shell readlink -f ${LOG_FILE})"
+
 run: ${JAR_FILE} ${LOG_FILE}
 	$(JAVA) -jar "${JAR_FILE}" "${LOG_FILE}"
 

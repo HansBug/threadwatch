@@ -19,28 +19,31 @@ limitations under the License.
 #ifndef THREADLIST_H
 
 #define THREADLIST_H
-typedef struct ThreadListNode 
-{
-   struct ThreadListNode *next;
-   jint previousThreadState;
-   int uniqueThreadId;    
-   char *threadName;
-   jthread thread;
-   jthread threadGlobalRef;   
+typedef struct ThreadListNode {
+    struct ThreadListNode *next;
+    jint previousThreadState;
+    int uniqueThreadId;
+    char *threadName;
+    jthread thread;
+    jthread threadGlobalRef;
 } ThreadListNode;
 
 typedef struct ThreadList {
-   ThreadListNode *head;
-   ThreadListNode *tail; 
-   int size;
+    ThreadListNode *head;
+    ThreadListNode *tail;
+    int size;
 } ThreadList;
 
-typedef void (*ThreadListVisitor)(ThreadListNode*);
-typedef void (*CleanUpVisitor)(ThreadListNode*,void*);
+typedef void (*ThreadListVisitor)(ThreadListNode *);
 
-ThreadListNode* addThreadListNode(char *threadName,jthread thread,jthread threadGlobalRef);
-void removeThreadListNode(jthread thread,CleanUpVisitor,void *);
-ThreadListNode *findThreadListNode(jthread thread); 
+typedef void (*CleanUpVisitor)(ThreadListNode *, void *);
+
+ThreadListNode *addThreadListNode(char *threadName, jthread thread, jthread threadGlobalRef);
+
+void removeThreadListNode(jthread thread, CleanUpVisitor, void *);
+
+ThreadListNode *findThreadListNode(jthread thread);
+
 void visitThreadList(ThreadListVisitor visitor);
 
 #endif

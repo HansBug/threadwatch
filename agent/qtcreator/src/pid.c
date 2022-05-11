@@ -23,12 +23,13 @@ limitations under the License.
 #include "pid.h"
 
 static double calculateDelay(double e, double Ta);
+
 static double delay(long value);
 
-static int  initialized=0;
+static int initialized = 0;
 
-static struct timespec pidStartTime = {0,0};
-static struct timespec pidCurrentTime = {0,0};
+static struct timespec pidStartTime = {0, 0};
+static struct timespec pidCurrentTime = {0, 0};
 
 static double esum = 0.0;
 static double ealt = 0.0;
@@ -37,115 +38,110 @@ static double delaySum = 0.0;
 static unsigned long long loopCount = 0;
 static double deviation;
 
-static long maxDelay=LONG_MIN;
-static long minDelay=LONG_MAX;
+static long maxDelay = LONG_MIN;
+static long minDelay = LONG_MAX;
 
 static double dummyValue = 0.0;
 
 double elapsedSeconds() {
 
-    double deltaSeconds=pidCurrentTime.tv_sec-pidStartTime.tv_sec;
+    double deltaSeconds = pidCurrentTime.tv_sec - pidStartTime.tv_sec;
     double deltaNanos;
-    if ( deltaSeconds < 1.0 ) {
+    if (deltaSeconds < 1.0) {
         deltaNanos = pidCurrentTime.tv_nsec - pidStartTime.tv_nsec;
     } else {
-        deltaNanos = (1000000000.0 - pidStartTime.tv_nsec)+pidCurrentTime.tv_nsec;
+        deltaNanos = (1000000000.0 - pidStartTime.tv_nsec) + pidCurrentTime.tv_nsec;
     }
-    return deltaSeconds+deltaNanos/1000000000.0;
+    return deltaSeconds + deltaNanos / 1000000000.0;
 }
 
-double fakeSomeWork()
-{
-  double x = 1;
-  int i,j;
-  for ( i = 100 ; i > 0 ; i--)
-  {
-     for ( j = 2000 ; j > 0 ; j--) {
-        x = x*x+(i*j)+i*x;
-     }
-  }
-  return x;
+double fakeSomeWork() {
+    double x = 1;
+    int i, j;
+    for (i = 100; i > 0; i--) {
+        for (j = 2000; j > 0; j--) {
+            x = x * x + (i * j) + i * x;
+        }
+    }
+    return x;
 }
 
-int main(int argc,char **args) {
+int main(int argc, char **args) {
 
-  Config config={ .outputFile=NULL , .maxPidDelay=MAX_DELAY , .verboseMode=0};
-  unsigned long i;
-  for ( i = 1000000 ; i > 0 ; i-- )
-  {
-    fakeSomeWork();
-     delayLoop(&config);
-  }
-  return 0;
+    Config config = {.outputFile=NULL, .maxPidDelay=MAX_DELAY, .verboseMode=0};
+    unsigned long i;
+    for (i = 1000000; i > 0; i--) {
+        fakeSomeWork();
+        delayLoop(&config);
+    }
+    return 0;
 }
 
-void delayLoop(Config *config)
-{
+void delayLoop(Config *config) {
     long delayMicros;
     double deltaTimeSeconds;
     double actualLoopsPerSecond;
 
-    if ( ! initialized )
-    {
-        if ( clock_gettime( CLOCK_REALTIME, &pidStartTime ) ) {
-            fprintf(stderr,"ERROR: clock_gettime() failed\n");
+    if (!initialized) {
+        if (clock_gettime(CLOCK_REALTIME, &pidStartTime)) {
+            fprintf(stderr, "ERROR: clock_gettime() failed\n");
         }
-        initialized=1;
+        initialized = 1;
         return;
     }
 
-    if ( clock_gettime( CLOCK_REALTIME , &pidCurrentTime ) ) {
-        fprintf(stderr,"ERROR: clock_gettime() failed\n");
+    if (clock_gettime(CLOCK_REALTIME, &pidCurrentTime)) {
+        fprintf(stderr, "ERROR: clock_gettime() failed\n");
         return;
     }
 
     loopCount++;
 
     deltaTimeSeconds = elapsedSeconds();
-    actualLoopsPerSecond = ( loopCount / deltaTimeSeconds );
-    deviation = DESIRED_LOOPS_PER_SECOND  - actualLoopsPerSecond;
+    actualLoopsPerSecond = (loopCount / deltaTimeSeconds);
+    deviation = DESIRED_LOOPS_PER_SECOND - actualLoopsPerSecond;
 
-    delayMicros = (long) round( config->maxPidDelay * calculateDelay( deviation , 2 ) );
+    delayMicros = (long) round(config->maxPidDelay * calculateDelay(deviation, 2));
 
-    if ( delayMicros > maxDelay ) {
-      maxDelay = delayMicros;
+    if (delayMicros > maxDelay) {
+        maxDelay = delayMicros;
     }
 
-    if ( delayMicros < minDelay ) {
-      minDelay = delayMicros;
+    if (delayMicros < minDelay) {
+        minDelay = delayMicros;
     }
 
     delaySum += delayMicros;
 
-    if ( config->verboseMode && (loopCount % DESIRED_LOOPS_PER_SECOND) == 0 ) {
-        printf("INFO: %f seconds elapsed (actual samples/second: %f , deviation: %f, delay loop iterations (min/current/max): %ld / %ld / %ld, jitter %ld,avg. iterations: %f)\n",deltaTimeSeconds,actualLoopsPerSecond,deviation, minDelay,delayMicros,maxDelay,maxDelay-minDelay,delaySum/loopCount);
-        maxDelay=LONG_MIN;
-        minDelay=LONG_MAX;
+    if (config->verboseMode && (loopCount % DESIRED_LOOPS_PER_SECOND) == 0) {
+        printf("INFO: %f seconds elapsed (actual samples/second: %f , deviation: %f, delay loop iterations (min/current/max): %ld / %ld / %ld, jitter %ld,avg. iterations: %f)\n",
+               deltaTimeSeconds, actualLoopsPerSecond, deviation, minDelay, delayMicros, maxDelay, maxDelay - minDelay,
+               delaySum / loopCount);
+        maxDelay = LONG_MIN;
+        minDelay = LONG_MAX;
     }
 
-    if ( delayMicros > 0 ) {
-        dummyValue = delay( delayMicros );
+    if (delayMicros > 0) {
+        dummyValue = delay(delayMicros);
     }
 }
 
-static double delay(long value)
-{
-        double dummy = value; 
+static double delay(long value) {
+    double dummy = value;
 #ifdef USE_DELAY_LOOP
-        long j;
-    for ( ; value > 0 ; value-- ) {
-      for (  j = 50 ; j > 0 ; j--) {
-          dummy=dummy*dummy*value+j;
-      }
+    long j;
+    for (; value > 0; value--) {
+        for (j = 50; j > 0; j--) {
+            dummy = dummy * dummy * value + j;
+        }
     }
 #else
-        usleep(value);
+    usleep(value);
 #endif
-      return dummy;
+    return dummy;
 }
 
-static double calculateDelay(double e, double Ta)
-{
+static double calculateDelay(double e, double Ta) {
     double y;
 
     /*
@@ -155,17 +151,17 @@ y = Kp*e + Ki*Ta*esum + Kd/Ta*(e – ealt);	//Reglergleichung
 ealt = e;
      */
     esum += e;
-    if ( esum > 10 ) {
+    if (esum > 10) {
         esum = 10;
-    } else if ( esum < -10) {
+    } else if (esum < -10) {
         esum = -10;
     }
-    y = Kp * e + Ki*Ta*esum + Kd/Ta*(e-ealt);
+    y = Kp * e + Ki * Ta * esum + Kd / Ta * (e - ealt);
     ealt = e;
 
-    if ( y < 0 ) {
+    if (y < 0) {
         y = 0;
-    } else if ( y > 1 ) {
+    } else if (y > 1) {
         y = 1;
     }
     return y;

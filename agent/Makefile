@@ -15,6 +15,7 @@ JAVA       ?= $(shell which java)
 JAVAC      ?= $(shell which javac)
 
 LOG_FILE   ?= /tmp/threadwatcher.out
+VERBOSE    ?= 
 
 all: build
 build: $(TARGET)/Test.class $(TARGET)/agent.so
@@ -44,7 +45,7 @@ $(TARGET)/Test.class: java/Test.java
 	$(JAVAC) java/Test.java -d target
 
 test: $(TARGET)/Test.class $(TARGET)/agent.so
-	$(JAVA) -Xss512k -agentpath:target/agent.so=file=${LOG_FILE},verbose=true -cp $(TARGET) Test
+	$(JAVA) -Xss512k -agentpath:target/agent.so=file=${LOG_FILE},$(if ${VERBOSE},verbose=true,) -cp $(TARGET) Test
 
 clean:
 	$(RM) $(TARGET)/*.o $(TARGET)/*.so $(TARGET)/*.class
