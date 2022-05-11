@@ -7,3 +7,4 @@ core
 .settings
 .project
 .classpath
+/target
