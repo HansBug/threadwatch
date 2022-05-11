@@ -15,102 +15,91 @@
  */
 package de.codesourcery.threadwatcher;
 
+import de.codesourcery.threadwatcher.ui.LegendItem;
+import de.codesourcery.threadwatcher.ui.UIConstants;
+import org.apache.commons.lang.StringUtils;
+
 import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.commons.lang.StringUtils;
-
-import de.codesourcery.threadwatcher.ui.LegendItem;
-import de.codesourcery.threadwatcher.ui.UIConstants;
-
-public final class PerThreadStatistics 
-{
+public final class PerThreadStatistics {
     public final int threadId;
-    
+
     private LegendItem lastThreadState;
-    
+
     private long lastEventSeconds;
     private long lastEventNanos;
-    
-    public boolean containsData=false;
-    
-    public final Map<LegendItem,Double> sumDurationInMillis = new HashMap<>();
-    
-    public PerThreadStatistics(int threadId)
-    {
+
+    public boolean containsData = false;
+
+    public final Map<LegendItem, Double> sumDurationInMillis = new HashMap<>();
+
+    public PerThreadStatistics(int threadId) {
         this.threadId = threadId;
-        for ( LegendItem item : UIConstants.LEGEND_ITEMS) {
-            sumDurationInMillis.put( item , new Double(0) );
+        for (LegendItem item : UIConstants.LEGEND_ITEMS) {
+            sumDurationInMillis.put(item, new Double(0));
         }
     }
-    
+
     public Double getDurationMillisFor(LegendItem item) {
-    	return sumDurationInMillis.get(item);
+        return sumDurationInMillis.get(item);
     }
-    
-    public void processEvent(ThreadEvent event) 
-    {
-        if ( lastThreadState != null ) 
-        {
-            Double total = sumDurationInMillis.get( lastThreadState );
-            total = total + HiResInterval.getDurationInMilliseconds( lastEventSeconds,lastEventNanos , event.timestampSeconds,event.timestampNanos);
-            sumDurationInMillis.put( lastThreadState , total );
+
+    public void processEvent(ThreadEvent event) {
+        if (lastThreadState != null) {
+            Double total = sumDurationInMillis.get(lastThreadState);
+            total = total + HiResInterval.getDurationInMilliseconds(lastEventSeconds, lastEventNanos, event.timestampSeconds, event.timestampNanos);
+            sumDurationInMillis.put(lastThreadState, total);
         }
-        lastThreadState = UIConstants.getLegendItemForEvent( event );
+        lastThreadState = UIConstants.getLegendItemForEvent(event);
         lastEventSeconds = event.timestampSeconds;
         lastEventNanos = event.timestampNanos;
-        containsData=true;        
+        containsData = true;
     }
-    
-    public void finish(HiResInterval statisticsInterval) 
-    {
-        if ( lastThreadState != null ) 
-        {
+
+    public void finish(HiResInterval statisticsInterval) {
+        if (lastThreadState != null) {
             final HiResTimestamp end = statisticsInterval.end;
-            Double total = sumDurationInMillis.get( lastThreadState );
-            total = total + HiResInterval.getDurationInMilliseconds( lastEventSeconds,lastEventNanos , end.secondsSinceEpoch,end.nanoseconds);
-            sumDurationInMillis.put( lastThreadState , total );            
+            Double total = sumDurationInMillis.get(lastThreadState);
+            total = total + HiResInterval.getDurationInMilliseconds(lastEventSeconds, lastEventNanos, end.secondsSinceEpoch, end.nanoseconds);
+            sumDurationInMillis.put(lastThreadState, total);
             lastThreadState = null;
         }
     }
-    
+
     @Override
-    public boolean equals(Object obj)
-    {
-        if ( obj != null && obj.getClass() == PerThreadStatistics.class ) {
+    public boolean equals(Object obj) {
+        if (obj != null && obj.getClass() == PerThreadStatistics.class) {
             return this.threadId == ((PerThreadStatistics) obj).threadId;
         }
         return false;
     }
-    
-    public String getAsString(double totalIntervalMillis)
-    {
+
+    public String getAsString(double totalIntervalMillis) {
         StringBuilder result = new StringBuilder();
-        result.append("Thread "+threadId).append("\n");
+        result.append("Thread " + threadId).append("\n");
         result.append("-------------").append("\n");
-        
+
         final DecimalFormat DF = new DecimalFormat("##0.0##");
-        for (Iterator<Entry<LegendItem, Double>> it = sumDurationInMillis.entrySet().iterator(); it.hasNext();) 
-        {
+        for (Iterator<Entry<LegendItem, Double>> it = sumDurationInMillis.entrySet().iterator(); it.hasNext(); ) {
             final Entry<LegendItem, Double> entry = it.next();
             double millis = entry.getValue();
-            if ( millis != 0.0 ) {
-                double percentage = 100.0*( millis / totalIntervalMillis );
-                result.append( StringUtils.leftPad( entry.getKey().title , 20 )+": "+DF.format( percentage )+" % ("+millis+" ms)");
-                if ( it.hasNext() ) {
+            if (millis != 0.0) {
+                double percentage = 100.0 * (millis / totalIntervalMillis);
+                result.append(StringUtils.leftPad(entry.getKey().title, 20) + ": " + DF.format(percentage) + " % (" + millis + " ms)");
+                if (it.hasNext()) {
                     result.append("\n");
-                }                
+                }
             }
         }
         return result.toString();
     }
-    
+
     @Override
-    public int hashCode()
-    {
+    public int hashCode() {
         return threadId;
     }
 }

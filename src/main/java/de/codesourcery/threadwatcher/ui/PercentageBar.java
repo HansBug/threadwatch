@@ -15,107 +15,87 @@
  */
 package de.codesourcery.threadwatcher.ui;
 
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Graphics;
-import java.awt.Insets;
-import java.awt.Point;
-import java.awt.Rectangle;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import javax.swing.*;
+import java.awt.*;
+import java.util.*;
 import java.util.Map.Entry;
 
-import javax.swing.JPanel;
+public class PercentageBar extends JPanel {
+    private static final Insets INSETS = new Insets(2, 2, 2, 2);
 
-public class PercentageBar extends JPanel
-{
-	private static final Insets INSETS = new Insets(2,2,2,2);
-	
-    private final LinkedHashMap<Color,IPercentageProvider> percentages = new LinkedHashMap<>();
-    private final Map<Rectangle,IPercentageProvider> valuesByRect = new HashMap<>();
-    
+    private final LinkedHashMap<Color, IPercentageProvider> percentages = new LinkedHashMap<>();
+    private final Map<Rectangle, IPercentageProvider> valuesByRect = new HashMap<>();
+
     private Color backgroundColor = Color.WHITE;
-    
-    public IPercentageProvider getValueForPoint(Point p) 
-    {
-        for ( Entry<Rectangle, IPercentageProvider> entry : valuesByRect.entrySet() ) 
-        {
-            if ( entry.getKey().contains( p ) ) 
-            {
+
+    public IPercentageProvider getValueForPoint(Point p) {
+        for (Entry<Rectangle, IPercentageProvider> entry : valuesByRect.entrySet()) {
+            if (entry.getKey().contains(p)) {
                 return entry.getValue();
             }
         }
         return null;
     }
-    
-    public interface IPercentageProvider 
-    {
+
+    public interface IPercentageProvider {
         public double getPercentageValue();
     }
-    
+
     public PercentageBar() {
-    	setPreferredSize( new Dimension(100,20 ) );
+        setPreferredSize(new Dimension(100, 20));
     }
-    
+
     public Collection<IPercentageProvider> getValues() {
-    	return new ArrayList<>( percentages.values() );
+        return new ArrayList<>(percentages.values());
     }
-    
-    public void setPercentage(Color color,IPercentageProvider value) 
-    {
-        if ( color == null ) 
-        {
+
+    public void setPercentage(Color color, IPercentageProvider value) {
+        if (color == null) {
             throw new IllegalArgumentException("color must not be NULL.");
         }
-        if ( value == null ) {
+        if (value == null) {
             throw new IllegalArgumentException("value must not be NULL.");
         }
-        percentages.put(color,value);
+        percentages.put(color, value);
     }
-    
+
     @Override
-    protected void paintComponent(Graphics g) 
-    {
-    	super.paintComponent(g);
-    	render( g , new Rectangle(0,0,getWidth() , getHeight() ) );
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        render(g, new Rectangle(0, 0, getWidth(), getHeight()));
     }
-    
-    public void render(Graphics g,Rectangle bounds) 
-    {
-    	g.setColor(backgroundColor);
-    	g.fillRect( bounds.x , bounds.y , bounds.width , bounds.height );
-    	
+
+    public void render(Graphics g, Rectangle bounds) {
+        g.setColor(backgroundColor);
+        g.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
+
         g.setColor(Color.BLACK);
-        
+
         final int xmin = bounds.x + INSETS.left;
         final int ymin = bounds.y + INSETS.top;
-        
+
         final int xmax = xmin + bounds.width - INSETS.right - INSETS.left;
         final int ymax = ymin + bounds.height - INSETS.top - INSETS.bottom;
-        
+
         final int width = xmax - xmin;
         final int height = ymax - ymin;
-        g.drawRect( xmin,ymin , width , height); 
-        
+        g.drawRect(xmin, ymin, width, height);
+
         double scaleX = width / 100.0;
         double lastX = xmin;
-        
+
         valuesByRect.clear();
-        
-        for ( Entry<Color, IPercentageProvider> entry : percentages.entrySet() ) 
-        {
-            final double currentX = lastX+ entry.getValue().getPercentageValue()*scaleX;
+
+        for (Entry<Color, IPercentageProvider> entry : percentages.entrySet()) {
+            final double currentX = lastX + entry.getValue().getPercentageValue() * scaleX;
             g.setColor(entry.getKey());
-            final int boxX = (int) Math.round( lastX );
-            final int boxWidth = (int) Math.round( currentX - lastX );
-            g.fillRect( boxX , ymin, boxWidth , height );
-            g.setColor( Color.BLACK );
-            g.drawRect( boxX , ymin , boxWidth , height );    
-            
-            valuesByRect.put( new Rectangle( boxX , ymin , boxWidth , height ) , entry.getValue() );
+            final int boxX = (int) Math.round(lastX);
+            final int boxWidth = (int) Math.round(currentX - lastX);
+            g.fillRect(boxX, ymin, boxWidth, height);
+            g.setColor(Color.BLACK);
+            g.drawRect(boxX, ymin, boxWidth, height);
+
+            valuesByRect.put(new Rectangle(boxX, ymin, boxWidth, height), entry.getValue());
             lastX = currentX;
         }
     }
