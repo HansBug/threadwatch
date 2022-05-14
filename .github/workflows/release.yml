@@ -8,7 +8,7 @@ jobs:
   release:
     name: Publish to github release
     runs-on: ${{ matrix.os }}
-    if: ${{ github.repository == 'hansbug/threadwatcher' }}
+    if: ${{ github.repository == 'hansbug/threadwatch' }}
     strategy:
       matrix:
         os:
