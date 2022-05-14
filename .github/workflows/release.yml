@@ -1,0 +1,75 @@
+name: Package Release
+
+on:
+  release:
+    types: [ published ]
+
+jobs:
+  release:
+    name: Publish to github release
+    runs-on: ${{ matrix.os }}
+    if: ${{ github.repository == 'hansbug/threadwatcher' }}
+    strategy:
+      matrix:
+        os:
+          - 'ubuntu-18.04'
+        python-version:
+          - '3.8'
+        java-version:
+          - '8'
+
+    steps:
+      - name: Get system version for Linux
+        if: ${{ contains(matrix.os, 'ubuntu') }}
+        shell: bash
+        run: |
+          echo "OS_NAME=Linux" >> $GITHUB_ENV
+          echo "IS_WIN=" >> $GITHUB_ENV
+          echo "IS_MAC=" >> $GITHUB_ENV
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 20
+      - name: Set up system dependences on Linux
+        if: ${{ env.OS_NAME == 'Linux' }}
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tree cloc wget curl make zip
+          sudo apt-get install -y libxml2-dev libxslt-dev python-dev  # need by pypy3
+      - name: Set up python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Set up java ${{ matrix.java-version }}
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin' # See 'Supported distributions' for available options
+          java-version: ${{ matrix.java-version }}
+          cache: 'maven'
+      - name: Build agent
+        shell: bash
+        run: |
+          make -C ./agent build
+          ls -al ./agent/target/agent.so
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./agent/target/agent.so
+          tag: ${{ github.ref }}
+          overwrite: true
+          file_glob: true
+      - name: Build thread watcher jar
+        shell: bash
+        run: |
+          make build
+          ls -al ./target/threadwatcher.jar
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./target/threadwatcher.jar
+          tag: ${{ github.ref }}
+          overwrite: true
+          file_glob: true
