@@ -7,7 +7,7 @@ AGENT      := ./agent
 TARGET     := ./target
 AGENT_FILE := ${AGENT}/target/agent.so
 JAR_FILE   := ${TARGET}/threadwatcher.jar
-LOG_FILE   := ${TARGET}/watch_result.log
+LOG_FILE   ?= ${TARGET}/watch_result.log
 
 all: build
 build: ${JAR_FILE} ${AGENT_FILE}

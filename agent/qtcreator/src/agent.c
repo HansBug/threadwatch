@@ -353,41 +353,33 @@ static int populateThreadDeathRecord(DataRecord *record, ThreadListNode *current
     return 1;
 }
 
-static void JNICALL
-onThreadStart(jvmtiEnv
-*jvmti_env,
-JNIEnv *jni_env, jthread
-thread)
-{
-jthread threadGlobalRef;
-jvmtiThreadInfo threadInfo;
-ThreadListNode *newNode;
+static void JNICALL onThreadStart(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jthread thread) {
+    jthread threadGlobalRef;
+    jvmtiThreadInfo threadInfo;
+    ThreadListNode *newNode;
 
-enterAgentMonitor(jvmti_env);
+    enterAgentMonitor(jvmti_env);
 
-// START: Critical section
-(*jvmti)->
-GetThreadInfo(jvmti, thread,
-&threadInfo);
+    // START: Critical section
+    (*jvmti)->GetThreadInfo(jvmti, thread, &threadInfo);
 
-if ( threadInfo.name != NULL && ! isSamplingThread( &threadInfo )) { // ignore attaching of our sampling thread
+    if (threadInfo.name != NULL && !isSamplingThread(&threadInfo)) { // ignore attaching of our sampling thread
+        #ifdef DEBUG
+            fprintf(stderr, "Thread started: %s (ID: %lx)\n",threadInfo.name,thread);
+        #endif
 
-#ifdef DEBUG
-fprintf(stderr, "Thread started: %s (ID: %lx)\n",threadInfo.name,thread);
-#endif
+        // create global ref to the thread instance so it
+        // does not get GC'ed after this function returns..we need it in the sampling thread
 
-// create global ref to the thread instance so it
-// does not get GC'ed after this function returns..we need it in the sampling thread
+        threadGlobalRef = (*jni_env)->NewGlobalRef(jni_env, thread);
+        newNode = addThreadListNode(threadInfo.name, thread, threadGlobalRef);
 
-threadGlobalRef = (*jni_env)->NewGlobalRef(jni_env, thread);
-newNode = addThreadListNode(threadInfo.name, thread, threadGlobalRef);
+        writeRecord(sampleBuffer, (WriteRecordCallback)
+        &populateThreadStartRecord, (void*) newNode );
+    }
 
-writeRecord(sampleBuffer, (WriteRecordCallback)
-&populateThreadStartRecord, (void*) newNode );
-}
-
-// END: Critical section
-exitAgentMonitor(jvmti_env);
+    // END: Critical section
+    exitAgentMonitor(jvmti_env);
 }
 
 static void cleanUp(ThreadListNode *node, jvmtiEnv *jvmti_env) {
@@ -406,37 +398,28 @@ static void cleanUp(ThreadListNode *node, jvmtiEnv *jvmti_env) {
     exitAgentMonitor(jvmti_env);
 }
 
-static void JNICALL
-onThreadEnd(jvmtiEnv
-*jvmti_env,
-JNIEnv *jni_env, jthread
-thread)
-{
-jvmtiThreadInfo threadInfo;
-ThreadListNode *existingNode;
+static void JNICALL onThreadEnd(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jthread thread) {
+    jvmtiThreadInfo threadInfo;
+    ThreadListNode *existingNode;
 
-enterAgentMonitor(jvmti_env);
+    enterAgentMonitor(jvmti_env);
 
-// START: Critical section
-(*jvmti)->
-GetThreadInfo(jvmti, thread,
-&threadInfo);
+    // START: Critical section
+    (*jvmti)->GetThreadInfo(jvmti, thread, &threadInfo);
 
-if ( threadInfo.name != NULL && ! isSamplingThread( &threadInfo ))
-{
-#ifdef DEBUG
-fprintf(stderr, "Thread ended: %s (ID: %lx)\n",threadInfo.name,thread);
-#endif
+    if (threadInfo.name != NULL && !isSamplingThread(&threadInfo)) {
+        #ifdef DEBUG
+            fprintf(stderr, "Thread ended: %s (ID: %lx)\n", threadInfo.name, thread);
+        #endif
 
-existingNode = findThreadListNode(thread);
-if ( existingNode != NULL) {
-writeRecord(sampleBuffer, (WriteRecordCallback)
-&populateThreadDeathRecord, (void*) existingNode );
-}
-removeThreadListNode(thread, (CleanUpVisitor)
-&cleanUp, jvmti_env);
-}
+        existingNode = findThreadListNode(thread);
+        if (existingNode != NULL) {
+            writeRecord(sampleBuffer, (WriteRecordCallback)
+            &populateThreadDeathRecord, (void*) existingNode);
+        }
+        removeThreadListNode(thread, (CleanUpVisitor) &cleanUp, jvmti_env);
+    }
 
-// END: Critical section
-exitAgentMonitor(jvmti_env);
+    // END: Critical section
+    exitAgentMonitor(jvmti_env);
 }

@@ -1,6 +1,6 @@
 from typing import Iterator, Tuple, Optional
 
-from hbutils.binary import c_uint, c_int, c_long, c_sized_str
+from hbutils.binary import c_uint, c_int, c_long, c_buffer
 from hbutils.file import is_eof
 
 from .model import EventType, ThreadState
@@ -27,7 +27,8 @@ def load_from_file(filename: str) \
 
             name, state = None, None
             if type_ == 0:
-                name = c_sized_str(51).read(file_)
+                name = c_buffer(51).read(file_)
+                name = name.rstrip(b'\x00')
             elif type_ == 2:
                 state = ThreadState(c_int.read(file_))
 
