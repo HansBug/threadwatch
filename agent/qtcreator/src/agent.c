@@ -363,7 +363,7 @@ static void JNICALL onThreadStart(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jthread 
     // START: Critical section
     (*jvmti)->GetThreadInfo(jvmti, thread, &threadInfo);
 
-    if (threadInfo.name != NULL && !isSamplingThread(&threadInfo)) { // ignore attaching of our sampling thread
+    if (threadInfo.name != NULL && !isSamplingThread(&threadInfo) && !threadInfo.is_daemon) { // ignore attaching of our sampling thread
         #ifdef DEBUG
             fprintf(stderr, "Thread started: %s (ID: %lx)\n",threadInfo.name,thread);
         #endif
@@ -374,8 +374,7 @@ static void JNICALL onThreadStart(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jthread 
         threadGlobalRef = (*jni_env)->NewGlobalRef(jni_env, thread);
         newNode = addThreadListNode(threadInfo.name, thread, threadGlobalRef);
 
-        writeRecord(sampleBuffer, (WriteRecordCallback)
-        &populateThreadStartRecord, (void*) newNode );
+        writeRecord(sampleBuffer, (WriteRecordCallback) &populateThreadStartRecord, (void*) newNode);
     }
 
     // END: Critical section
@@ -407,15 +406,14 @@ static void JNICALL onThreadEnd(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jthread th
     // START: Critical section
     (*jvmti)->GetThreadInfo(jvmti, thread, &threadInfo);
 
-    if (threadInfo.name != NULL && !isSamplingThread(&threadInfo)) {
+    if (threadInfo.name != NULL && !isSamplingThread(&threadInfo) && !threadInfo.is_daemon) {
         #ifdef DEBUG
             fprintf(stderr, "Thread ended: %s (ID: %lx)\n", threadInfo.name, thread);
         #endif
 
         existingNode = findThreadListNode(thread);
         if (existingNode != NULL) {
-            writeRecord(sampleBuffer, (WriteRecordCallback)
-            &populateThreadDeathRecord, (void*) existingNode);
+            writeRecord(sampleBuffer, (WriteRecordCallback) &populateThreadDeathRecord, (void*) existingNode);
         }
         removeThreadListNode(thread, (CleanUpVisitor) &cleanUp, jvmti_env);
     }

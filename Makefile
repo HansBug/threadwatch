@@ -19,9 +19,11 @@ ${AGENT_FILE}:
 	$(MAKE) -C ${AGENT} build
 
 ${LOG_FILE}:
+	mkdir -p ${TARGET}
 	$(MAKE) -C ${AGENT} test LOG_FILE="$(shell readlink -f ${LOG_FILE})"
 
 test:
+	mkdir -p ${TARGET}
 	$(MAKE) -C ${AGENT} test LOG_FILE="$(shell readlink -f ${LOG_FILE})"
 
 run: ${JAR_FILE} ${LOG_FILE}
